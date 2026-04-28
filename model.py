@@ -7,9 +7,11 @@ import torch.nn.functional as F
 with open('input.txt', 'r') as f:
     text = f.read()
 
-
 chars = ''.join(sorted(set(text)))
 
+
+# params
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 vocab_size = len(chars)
 batch_size = 32
 chunk_size = 64
@@ -148,7 +150,19 @@ class GPT(nn.Module):
             loss = F.cross_entropy(logits.view(B*T, V), targets.view(B*T))
 
         return logits, loss
+
+    @torch.no_grad()
+    def generate(self, idx, max_new_tokens, chunk_size):
+        for _ in range(max_new_tokens):
+            idx_cond = idx[:, -chunk_size:]
+            logits, _ = self(idx_cond)
+            logits = logits[:, -1, :]
+            probs = F.softmax(logits, dim=-1)
+            next_token = torch.multinomial(probs, num_samples=1)
+            idx = torch.cat([idx, next_token], dim=1)
+        return idx
     
+
 
 model = GPT(vocab_size, d_model=64, chunk_size=chunk_size, num_heads=num_heads)
 optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
@@ -163,3 +177,10 @@ for step in range(max_steps):
 
     if step % 100 == 0:
         print(f"step {step}: loss {loss.item():.4f}")
+
+model.eval()
+context = torch.zeros((1, 1), dtype=torch.long)
+generated = model.generate(context, max_new_tokens=500, chunk_size=chunk_size)
+
+decoded = ''.join(itos[i] for i in generated[0].tolist())
+print(decoded)
