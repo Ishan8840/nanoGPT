@@ -32,6 +32,16 @@ def get_batch(batch_size, chunk_size):
     return x, y
 
 
+# Attention
+class Head(nn.Module):
+
+    def __init__(self, d_model, head_size, max_seq_len):
+        super().__init__()
+        self.query = nn.Linear(d_model, head_size, bias=False)
+        self.key = nn.Linear(d_model, head_size, bias=False)
+        self.value = nn.Linear(d_model, head_size, bias=False)
+
+
 
 class GPT(nn.Module):
 
