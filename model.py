@@ -9,8 +9,16 @@ with open('input.txt', 'r') as f:
 
 
 chars = ''.join(sorted(set(text)))
+
 vocab_size = len(chars)
-chunk_size = 8
+batch_size = 32
+chunk_size = 64
+d_model = 64
+num_heads = 4
+num_layers = 4
+max_steps = 5000
+lr = 3e-4
+
 
 # encoding and decoding
 stoi = { ch:i for i, ch in enumerate(chars)}
@@ -142,8 +150,16 @@ class GPT(nn.Module):
         return logits, loss
     
 
-model = GPT(vocab_size, d_model=64, chunk_size=chunk_size)
-xb, yb = get_batch(4, 8)
-out = model(xb, chunk_size)
+model = GPT(vocab_size, d_model=64, chunk_size=chunk_size, num_heads=num_heads)
+optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
-print(out.shape)
+
+for step in range(max_steps):
+    xb, yb = get_batch(batch_size, chunk_size)
+    logits, loss = model(xb, yb) 
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+
+    if step % 100 == 0:
+        print(f"step {step}: loss {loss.item():.4f}")
